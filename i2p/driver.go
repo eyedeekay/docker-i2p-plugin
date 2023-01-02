@@ -8,7 +8,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/eyedeekay/onramp"
 
-	//"github.com/gopher-net/dknet"
 	dknet "github.com/docker/go-plugins-helpers/network"
 	log "github.com/sirupsen/logrus"
 )

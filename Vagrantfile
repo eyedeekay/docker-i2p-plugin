@@ -16,8 +16,8 @@ echo DOCKER_OPTS=\\"--default-network=ovs:ovsbr-docker0\\" >> /etc/default/docke
 service docker restart
 mkdir -p /usr/share/docker/plugins
 touch /run/docker/plugins/ovs.sock
-wget -O /home/vagrant/docker-ovs-plugin https://github.com/gopher-net/docker-ovs-plugin/raw/master/binaries/docker-ovs-plugin-0.1-Linux-x86_64
-chmod +x /home/vagrant/docker-ovs-plugin
+wget -O /home/vagrant/docker-i2p-plugin https://github.com/eyedeekay/docker-i2p-plugin/raw/master/binaries/docker-i2p-plugin-0.1-Linux-x86_64
+chmod +x /home/vagrant/docker-i2p-plugin
 SCRIPT
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
