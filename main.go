@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	dknet "github.com/docker/go-plugins-helpers/network"
-	"github.com/eyedeekay/docker-i2p-plugin/i2p"
+	ovs "github.com/eyedeekay/docker-i2p-plugin/i2p"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -54,7 +54,7 @@ func Run(ctx *cli.Context) {
 	if err != nil {
 		panic(err)
 	}
-	gid, err := lookupGroup("ovs")
+	gid, err := lookupGroup("i2psvc")
 	if err != nil {
 		panic(err)
 	}

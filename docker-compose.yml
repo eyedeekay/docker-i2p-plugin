@@ -1,5 +1,5 @@
 plugin:
-  image: gophernet/ovs-plugin
+  image: eyedeekay/i2p-plugin
   volumes:
     - /run/docker/plugins:/run/docker/plugins
     - /var/run/docker.sock:/var/run/docker.sock
@@ -10,7 +10,7 @@ plugin:
   command: -d
 
 ovs:
-  image: socketplane/openvswitch:2.3.2
+  image: geti2p/i2p
   cap_add: 
     - NET_ADMIN
   net: host

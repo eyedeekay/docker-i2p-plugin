@@ -6,7 +6,7 @@ VAGRANTFILE_API_VERSION = "2"
 
 $bootstrap=<<SCRIPT
 apt-get update
-apt-get -y install wget bridge-utils openvswitch-switch
+apt-get -y install wget bridge-utils i2p i2p-router
 wget -qO- https://experimental.docker.com/ | sh
 service docker stop
 gpasswd -a vagrant docker

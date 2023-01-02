@@ -10,7 +10,7 @@ plugin:
   command: -d
 
 ovs:
-  image: socketplane/openvswitch:2.3.2
+  image: geti2p/i2p
   cap_add: 
     - NET_ADMIN
   net: host
