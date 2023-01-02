@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	dknet "github.com/docker/go-plugins-helpers/network"
-	ovs "github.com/eyedeekay/docker-i2p-plugin/i2p"
+	i2p "github.com/eyedeekay/docker-i2p-plugin/i2p"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -50,7 +50,7 @@ func Run(ctx *cli.Context) {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	d, err := ovs.NewDriver()
+	d, err := i2p.NewDriver()
 	if err != nil {
 		panic(err)
 	}
