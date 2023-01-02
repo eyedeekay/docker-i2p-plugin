@@ -26,3 +26,4 @@ _testmain.go
 *.prof
 .idea
 plugin
+/docker-i2p-plugin

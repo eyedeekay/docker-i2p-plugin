@@ -38,11 +38,12 @@ var (
 )
 
 type Driver struct {
-	dknet.Driver
+	parent dknet.Driver
 	dockerer
-	ovsdber
+	//ovsdber
 	networks map[string]*NetworkState
-	OvsdbNotifier
+	samConn  *onramp.Garlic
+	//OvsdbNotifier
 }
 
 // NetworkState is filled in at network creation time
@@ -54,6 +55,34 @@ type NetworkState struct {
 	Gateway           string
 	GatewayMask       string
 	FlatBindInterface string
+}
+
+func (d *Driver) ProgramExternalConnectivity(r *dknet.ProgramExternalConnectivityRequest) error {
+	return nil
+}
+
+func (d *Driver) RevokeExternalConnectivity(r *dknet.RevokeExternalConnectivityRequest) error {
+	return nil
+}
+
+func (d *Driver) GetCapabilities() (*dknet.CapabilitiesResponse, error) {
+	return nil, nil
+}
+
+func (d *Driver) FreeNetwork(r *dknet.FreeNetworkRequest) error {
+	return nil
+}
+
+func (d *Driver) DiscoverNew(r *dknet.DiscoveryNotification) error {
+	return nil
+}
+func (d *Driver) AllocateNetwork(r *dknet.AllocateNetworkRequest) (*dknet.AllocateNetworkResponse, error) {
+	log.Debugf("Allocate network request: %+v", r)
+	return nil, nil
+}
+
+func (d *Driver) DiscoverDelete(r *dknet.DiscoveryNotification) error {
+	return nil
 }
 
 func (d *Driver) CreateNetwork(r *dknet.CreateNetworkRequest) error {
@@ -104,13 +133,6 @@ func (d *Driver) CreateNetwork(r *dknet.CreateNetworkRequest) error {
 
 func (d *Driver) DeleteNetwork(r *dknet.DeleteNetworkRequest) error {
 	log.Debugf("Delete network request: %+v", r)
-	bridgeName := d.networks[r.NetworkID].BridgeName
-	log.Debugf("Deleting Bridge %s", bridgeName)
-	/*err := d.deleteBridge(bridgeName)
-	if err != nil {
-		log.Errorf("Deleting bridge %s failed: %s", bridgeName, err)
-		return err
-	}*/
 	delete(d.networks, r.NetworkID)
 	return nil
 }
@@ -133,27 +155,6 @@ func (d *Driver) EndpointInfo(r *dknet.InfoRequest) (*dknet.InfoResponse, error)
 }
 
 func (d *Driver) Join(r *dknet.JoinRequest) (*dknet.JoinResponse, error) {
-	// create and attach local name to the bridge
-	/*localVethPair := vethPair(truncateID(r.EndpointID))
-	if err := netlink.LinkAdd(localVethPair); err != nil {
-		log.Errorf("failed to create the veth pair named: [ %v ] error: [ %s ] ", localVethPair, err)
-		return nil, err
-	}
-	// Bring the veth pair up
-	err := netlink.LinkSetUp(localVethPair)
-	if err != nil {
-		log.Warnf("Error enabling  Veth local iface: [ %v ]", localVethPair)
-		return nil, err
-	}*/
-	/*bridgeName := d.networks[r.NetworkID].BridgeName
-	err = d.addOvsVethPort(bridgeName, localVethPair.Name, 0)
-	if err != nil {
-		log.Errorf("error attaching veth [ %s ] to bridge [ %s ]", localVethPair.Name, bridgeName)
-		return nil, err
-	}
-	log.Infof("Attached veth [ %s ] to bridge [ %s ]", localVethPair.Name, bridgeName)*/
-
-	// SrcName gets renamed to DstPrefix + ID on the container iface
 	res := &dknet.JoinResponse{
 		InterfaceName: dknet.InterfaceName{
 			SrcName:   d.samConn.B32(),
@@ -167,18 +168,6 @@ func (d *Driver) Join(r *dknet.JoinRequest) (*dknet.JoinResponse, error) {
 
 func (d *Driver) Leave(r *dknet.LeaveRequest) error {
 	log.Debugf("Leave request: %+v", r)
-	/*localVethPair := vethPair(truncateID(r.EndpointID))
-	if err := netlink.LinkDel(localVethPair); err != nil {
-		log.Errorf("unable to delete veth on leave: %s", err)
-	}
-	portID := fmt.Sprintf(ovsPortPrefix + truncateID(r.EndpointID))
-	bridgeName := d.networks[r.NetworkID].BridgeName
-	err := d.ovsdber.deletePort(bridgeName, portID)
-	if err != nil {
-		log.Errorf("OVS port [ %s ] delete transaction failed on bridge [ %s ] due to: %s", portID, bridgeName, err)
-		return err
-	}
-	log.Infof("Deleted OVS port [ %s ] from bridge [ %s ]", portID, bridgeName)*/
 	log.Debugf("Leave %s:%s", r.NetworkID, r.EndpointID)
 	return nil
 }
@@ -189,7 +178,7 @@ func NewDriver() (*Driver, error) {
 		return nil, fmt.Errorf("could not connect to docker: %s", err)
 	}
 
-	// initiate the ovsdb manager port binding
+	// initiate the tunnel manager port binding
 	var samConn *onramp.Garlic
 	retries := 3
 	for i := 0; i < retries; i++ {
@@ -197,7 +186,7 @@ func NewDriver() (*Driver, error) {
 		if err == nil {
 			break
 		}
-		log.Errorf("could not connect to openvswitch on port [ %d ]: %s. Retrying in 5 seconds", ovsdbPort, err)
+		log.Errorf("could not connect to I2P on port [ %d ]: %s. Retrying in 5 seconds", "127.0.0.1:7656", err)
 		time.Sleep(5 * time.Second)
 	}
 
@@ -209,33 +198,10 @@ func NewDriver() (*Driver, error) {
 		dockerer: dockerer{
 			client: docker,
 		},
-		ovsdber: ovsdber{
-			samConn: samConn,
-		},
 		networks: make(map[string]*NetworkState),
 	}
-	// Initialize ovsdb cache at rpc connection setup
-	//d.ovsdber.initDBCache()
 	return d, nil
 }
-
-// Create veth pair. Peername is renamed to eth0 in the container
-/*func vethPair(suffix string) *netlink.Veth {
-	return &netlink.Veth{
-		LinkAttrs: netlink.LinkAttrs{Name: ovsPortPrefix + suffix},
-		PeerName:  "ethc" + suffix,
-	}
-}*/
-
-// Enable a netlink interface
-/*func interfaceUp(name string) error {
-	iface, err := netlink.LinkByName(name)
-	if err != nil {
-		log.Debugf("Error retrieving a link named [ %s ]", iface.Attrs().Name)
-		return err
-	}
-	return netlink.LinkSetUp(iface)
-}*/
 
 func truncateID(id string) string {
 	return id[:5]
@@ -262,16 +228,7 @@ func getBridgeName(r *dknet.CreateNetworkRequest) (string, error) {
 }
 
 func getBridgeMode(r *dknet.CreateNetworkRequest) (string, error) {
-	bridgeMode := defaultMode
-	if r.Options != nil {
-		if mode, ok := r.Options[modeOption].(string); ok {
-			if _, isValid := validModes[mode]; !isValid {
-				return "", fmt.Errorf("%s is not a valid mode", mode)
-			}
-			bridgeMode = mode
-		}
-	}
-	return bridgeMode, nil
+	return "overlay", nil
 }
 
 func getGatewayIP(r *dknet.CreateNetworkRequest) (string, string, error) {
@@ -283,7 +240,6 @@ func getGatewayIP(r *dknet.CreateNetworkRequest) (string, string, error) {
 	// multiple subnets on one network
 	// also in that case, we'll need a function to determine the correct default gateway based on it's IP/Mask
 	var gatewayIP string
-
 	if len(r.IPv6Data) > 0 {
 		if r.IPv6Data[0] != nil {
 			if r.IPv6Data[0].Gateway != "" {
@@ -300,7 +256,6 @@ func getGatewayIP(r *dknet.CreateNetworkRequest) (string, string, error) {
 			}
 		}
 	}
-
 	if gatewayIP == "" {
 		return "", "", fmt.Errorf("No gateway IP found")
 	}
